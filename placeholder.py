@@ -25,8 +25,18 @@ args = vars(ap.parse_args())
 
 # load the image, convert it to grayscale, and blur it slightly
 image = cv2.imread(args["image"])
+output = image.copy()
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-gray = cv2.GaussianBlur(gray, (7, 7), 0)
+hist = cv2.equalizeHist(gray)
+blur = cv2.GaussianBlur(hist, (31,31), cv2.BORDER_DEFAULT)
+height, width = blur.shape[:2]
+
+minR = round(width/65)
+maxR = round(width/11)
+minDis = round(width/7)
+
+circles = cv2.HoughCircles(blur, cv2.HOUGH_GRADIENT, 1, minDis, param1=100, param2=25, minRadius=minR, maxRadius=maxR)
+
 
 # perform edge detection, then perform a dilation + erosion to
 # close gaps in between object edges
@@ -57,6 +67,8 @@ for c in cnts:
 	box = cv2.cv.BoxPoints(box) if imutils.is_cv2() else cv2.boxPoints(box)
 	box = np.array(box, dtype="int")
 
+	print(box)
+
 	# order the points in the contour such that they appear
 	# in top-left, top-right, bottom-right, and bottom-left
 	# order, then draw the outline of the rotated bounding
@@ -67,6 +79,7 @@ for c in cnts:
 	# loop over the original points and draw them
 	for (x, y) in box:
 		cv2.circle(orig, (int(x), int(y)), 5, (0, 0, 255), -1)
+
 
 	# unpack the ordered bounding box, then compute the midpoint
 	# between the top-left and top-right coordinates, followed by
@@ -92,6 +105,8 @@ for c in cnts:
 	cv2.line(orig, (int(tlblX), int(tlblY)), (int(trbrX), int(trbrY)),
 		(255, 0, 255), 2)
 
+	cv2.circle(orig, (midpoint((int(tltrX), int(tltrY)),(int(blbrX), int(blbrY)))), 5, (0,0,0), -1)
+
 	# compute the Euclidean distance between the midpoints
 	dA = dist.euclidean((tltrX, tltrY), (blbrX, blbrY))
 	dB = dist.euclidean((tlblX, tlblY), (trbrX, trbrY))
@@ -114,6 +129,14 @@ for c in cnts:
 		(int(trbrX + 10), int(trbrY)), cv2.FONT_HERSHEY_SIMPLEX,
 		0.65, (255, 255, 255), 2)
 
-	# show the output image
+	# # show the output image
 	cv2.imshow("Image", orig)
 	cv2.waitKey(0)
+
+if circles is not None:
+		circles = np.round(circles[0, :]).astype("int")
+		for (x, y, r) in circles:
+			cv2.circle(output, (x, y), r, (0, 255, 0), 2)
+			cv2.rectangle(output, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
+cv2.imshow("result", np.hstack([image, output]))
+cv2.waitKey()
