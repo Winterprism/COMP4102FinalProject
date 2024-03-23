@@ -1,7 +1,7 @@
 # USAGE
-# python object_size.py --image images/example_01.png --width 0.955
-# python object_size.py --image images/example_02.png --width 0.955
-# python object_size.py --image images/example_03.png --width 3.5
+# python placeholder.py --image example_01.png --width 0.955
+# python placeholder.py --image example_02.png --width 0.955
+# python placeholder.py --image example_03.png --width 3.5
 
 # import the necessary packages
 from scipy.spatial import distance as dist
@@ -33,6 +33,7 @@ gray = cv2.GaussianBlur(gray, (7, 7), 0)
 edged = cv2.Canny(gray, 50, 100)
 edged = cv2.dilate(edged, None, iterations=1)
 edged = cv2.erode(edged, None, iterations=1)
+
 
 # find contours in the edge map
 cnts = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL,
