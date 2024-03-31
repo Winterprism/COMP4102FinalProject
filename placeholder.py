@@ -38,7 +38,7 @@ minDis = round(width/7)
 
 
 circles = cv2.HoughCircles(blur, cv2.HOUGH_GRADIENT, 1, minDis, param1=100, param2=25, minRadius=minR, maxRadius=maxR)
-
+print("type circle: ", str(type(circles)))
 if circles is None:
 	circles = [[[0]]]
 
@@ -102,6 +102,18 @@ for c in cnts:
 	cv2.circle(orig, (int(tX), int(tY)), 5, (0, 0, 0), -1)
 
 	circleFound = False
+
+	circles = np.asarray(circles)
+
+	if circles.ndim == 2:
+		print("inside arr ndim")
+		circles = [circles]
+
+	# if all(isinstance(row, np.ndarray) for row in circles):
+	# 	print("this is inside isinstance")
+	# 	circles = [circles]
+
+
 
 	if circles is not None:
 		for c in circles[0]:
