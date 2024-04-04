@@ -12,6 +12,9 @@ import argparse
 import imutils
 import cv2
 
+fontSize = 0.55
+
+
 def midpoint(ptA, ptB):
 	return ((ptA[0] + ptB[0]) * 0.5, (ptA[1] + ptB[1]) * 0.5)
 
@@ -59,14 +62,20 @@ cnts = imutils.grab_contours(cnts)
 (cnts, _) = contours.sort_contours(cnts)
 pixelsPerMetric = None
 
+# compute the rotated bounding box of the contour
+orig = image.copy()
+
+objectMidpoints = []
+
+
+
 # loop over the contours individually
 for c in cnts:
 	# if the contour is not sufficiently large, ignore it
 	if cv2.contourArea(c) < 100:
 		continue
 
-	# compute the rotated bounding box of the contour
-	orig = image.copy()
+	
 
 
 	box = cv2.minAreaRect(c)
@@ -79,13 +88,7 @@ for c in cnts:
 	# order, then draw the outline of the rotated bounding
 	# box
 	box = perspective.order_points(box)
-	cv2.drawContours(orig, [box.astype("int")], -1, (0, 255, 0), 2)
-
-	# loop over the original points and draw them
-	for (x, y) in box:
-		cv2.circle(orig, (int(x), int(y)), 5, (0, 0, 255), -1)
-
-
+	
 	# unpack the ordered bounding box, then compute the midpoint
 	# between the top-left and top-right coordinates, followed by
 	# the midpoint between bottom-left and bottom-right coordinates
@@ -108,30 +111,47 @@ for c in cnts:
 	if circles.ndim == 2:
 		print("inside arr ndim")
 		circles = [circles]
-
-	# if all(isinstance(row, np.ndarray) for row in circles):
-	# 	print("this is inside isinstance")
-	# 	circles = [circles]
-
-
+	
 
 	if circles is not None:
-		for c in circles[0]:
+		for ci in circles[0]:
 			print("ciclrs[0]: ", circles[0])
-			if abs(c[0] - tX) <= 6 and abs(c[1] - tY) <= 6:
+			if abs(ci[0] - tX) <= 6 and abs(ci[1] - tY) <= 6:
 				circleFound = True
 				circles = np.round(circles[0, :]).astype("int")
+
+
+				cA = dist.euclidean((ci[0] - ci[2],ci[1]), (ci[0] + ci[2],ci[1]))
+
+				# if the pixels per metric has not been initialized, then
+				# compute it as the ratio of pixels to supplied metric
+				# (in this case, inches)
+				if pixelsPerMetric is None:
+					pixelsPerMetric = cA / args["width"]
+
+				# compute the size of the object
+				dimcA = cA / pixelsPerMetric
+
+				cv2.putText(orig, "{:.1f}in".format(dimcA), (int(ci[0]-25),int(ci[1]-ci[2]-10)),cv2.FONT_HERSHEY_SIMPLEX,fontSize, (200, 0, 200), 2)
 				
+				print("circle found: ", ci)
+
 				for (x, y, r) in circles:
-					cv2.circle(output, (x, y), r, (0, 255, 0), 2)
-					cv2.rectangle(output, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
-				cv2.imshow("result", np.hstack([image, output]))
-				cv2.waitKey()
+					cv2.rectangle(orig, (x - 2, y - 2), (x + 2, y + 2), (255, 255, 0), -1)
+					cv2.circle(orig, (x, y), r, (0, 255, 0), 2)
+
 				
-			
 				break
 
 		if circleFound == False:
+			
+			print("tx:",tX)
+			print("ty:",tY)
+			# loop over the original points and draw them
+			for (x, y) in box:
+				cv2.circle(orig, (int(x), int(y)), 5, (0, 0, 255), -1)
+				cv2.drawContours(orig, [box.astype("int")], -1, (0, 255, 0), 2)
+		
 			cv2.circle(orig, (int(tltrX), int(tltrY)), 5, (255, 0, 0), -1)
 			cv2.circle(orig, (int(blbrX), int(blbrY)), 5, (255, 0, 0), -1)
 			cv2.circle(orig, (int(tlblX), int(tlblY)), 5, (255, 0, 0), -1)
@@ -163,15 +183,45 @@ for c in cnts:
 			# draw the object sizes on the image
 			cv2.putText(orig, "{:.1f}in".format(dimA),
 				(int(tltrX - 15), int(tltrY - 10)), cv2.FONT_HERSHEY_SIMPLEX,
-				0.65, (255, 255, 255), 2)
+				0.65, (255, 250, 56), 2)
 			cv2.putText(orig, "{:.1f}in".format(dimB),
 				(int(trbrX + 10), int(trbrY)), cv2.FONT_HERSHEY_SIMPLEX,
-				0.65, (255, 255, 255), 2)
+				0.65, (255, 250, 56), 2)
+			
 
-			# # show the output image
-			cv2.imshow("Image", orig)
-			cv2.waitKey(0)
+			
 
+			
+	
+	objectMidpoints.append((int(tX), int(tY)))
+	#print("tx, ty: ",tX,tY)
+	print("objectMidpoints: ", objectMidpoints)
+
+
+
+
+print("objectMidpoints: ", objectMidpoints)
+for x in range(len(objectMidpoints)-1):
+	print("x: ",x)
+	dm = dist.euclidean((objectMidpoints[x][0]   ,objectMidpoints[x][1]), (objectMidpoints[x+1][0],objectMidpoints[x+1][1]))
+	dmA = dm / pixelsPerMetric
+	
+	cv2.line(orig,objectMidpoints[x], objectMidpoints[x+1],(85,200,255), 2)
+	#(85,200,255)
+	#(35,100,125)
+	#(30,30,50)
+ 
+	cv2.putText(orig, "{:.1f}in".format(dmA ), (int((objectMidpoints[x][0] + objectMidpoints[x+1][0])/2),int((objectMidpoints[x][1]+objectMidpoints[x+1][1])/2)),cv2.FONT_HERSHEY_SIMPLEX,fontSize, (0, 0, 255), 2)
+
+
+
+
+
+
+			
+# # show the output image
+cv2.imshow("Image", orig)
+cv2.waitKey(0)
 
 
 # if circles is not None:
