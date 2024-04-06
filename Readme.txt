@@ -3,4 +3,3 @@ To run the program:
     - Replace "example_01.png" with the desired image to test
 
 
-distCalc.py
